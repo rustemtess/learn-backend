@@ -1,14 +1,25 @@
+import sys
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import settings
+
+print("Importing database...", file=sys.stderr)
 from .database import Base, engine
+print("✓ Database imported", file=sys.stderr)
+
+print("Importing routers...", file=sys.stderr)
 from .routers import admin, auth, enrollments, lessons, quizzes, users
+print("✓ Routers imported", file=sys.stderr)
 
-Base.metadata.create_all(bind=engine)
+# Don't create tables on every import in serverless environment
+# Tables should be created using create_tables.py script
+# Base.metadata.create_all(bind=engine)
 
+print("Creating FastAPI app...", file=sys.stderr)
 app = FastAPI(title=settings.app_name)
+print("✓ FastAPI app created", file=sys.stderr)
 
 # CORS middleware configuration
 # Parse comma-separated origins from settings

@@ -1,3 +1,4 @@
+import sys
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -9,10 +10,18 @@ connect_args = {}
 if settings.database_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
-engine = create_engine(
-    settings.database_url, connect_args=connect_args
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+try:
+    print(f"Creating database engine with URL: {settings.database_url[:20]}...", file=sys.stderr)
+    engine = create_engine(
+        settings.database_url, 
+        connect_args=connect_args,
+        pool_pre_ping=True  # Verify connections before using
+    )
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    print("✓ Database engine created", file=sys.stderr)
+except Exception as e:
+    print(f"❌ Error creating database engine: {e}", file=sys.stderr)
+    raise
 
 Base = declarative_base()
 
