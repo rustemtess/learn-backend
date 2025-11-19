@@ -170,14 +170,35 @@ vercel env rm VARIABLE_NAME
 
 ## Troubleshooting
 
+### Проблема: "FUNCTION_INVOCATION_FAILED" или "500 Internal Server Error"
+**Возможные причины и решения:**
+
+1. **Отсутствует DATABASE_URL:**
+   - Убедитесь, что переменная окружения `DATABASE_URL` установлена в Vercel
+   - Проверьте в Settings → Environment Variables
+
+2. **Неверный формат DATABASE_URL:**
+   - Для PostgreSQL: `postgresql://user:password@host:5432/database`
+   - Для Neon: `postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`
+
+3. **Отсутствует SECRET_KEY:**
+   - Добавьте переменную окружения `SECRET_KEY` со случайной строкой
+
+4. **Проверьте логи:**
+   - В Vercel Dashboard → Functions → View Logs
+   - Ищите ошибки импорта или инициализации
+
 ### Проблема: "Module not found"
-**Решение:** Убедитесь, что все зависимости указаны в `requirements.txt`
+**Решение:** 
+- Убедитесь, что все зависимости указаны в `requirements.txt`
+- Проверьте, что `mangum` добавлен в requirements.txt
 
 ### Проблема: "Database connection failed"
 **Решение:** 
 - Проверьте правильность DATABASE_URL
 - Убедитесь, что PostgreSQL доступен извне
 - Проверьте firewall правила
+- Для Neon: убедитесь, что добавили `?sslmode=require` в конце URL
 
 ### Проблема: CORS ошибки
 **Решение:** Добавьте ваш frontend домен в CORS_ORIGINS:
@@ -187,6 +208,34 @@ CORS_ORIGINS=https://your-app.vercel.app,https://www.your-domain.com
 
 ### Проблема: "Cold start" задержки
 **Решение:** Vercel имеет "cold start" для serverless функций. Первый запрос может быть медленным. Это нормально для бесплатного плана.
+
+### Проблема: Таблицы не созданы в базе данных
+**Решение:** 
+После первого деплоя нужно создать таблицы. Есть несколько вариантов:
+
+**Вариант 1: Локальное подключение к PostgreSQL**
+```python
+# create_tables.py
+from sqlalchemy import create_engine
+from app.models import Base
+
+DATABASE_URL = "postgresql://user:password@host/database"
+engine = create_engine(DATABASE_URL)
+Base.metadata.create_all(bind=engine)
+print("Tables created successfully!")
+```
+
+**Вариант 2: Через Vercel Function**
+Создайте временный эндпоинт в `app/main.py`:
+```python
+@app.get("/admin/init-db")
+def init_database(db: Session = Depends(get_db)):
+    from app.database import Base, engine
+    Base.metadata.create_all(bind=engine)
+    return {"status": "Database initialized"}
+```
+Затем вызовите: `curl https://your-api.vercel.app/admin/init-db`
+(Удалите этот эндпоинт после использования!)
 
 ## Мониторинг
 
